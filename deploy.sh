@@ -1,13 +1,14 @@
 #! /bin/bash
 stackName='instanceScheduler'
 region='us-east-1'
+adminEmail='123@usa.com'
 
 #If you use another cli profile for elevated priviledges uncomment the
 #followind line and modify it with your profile name.  Also uncomment the
 #last line in this file to change back to the default profile after the 
 #script completes.
 
-export AWS_DEFAULT_PROFILE=admin
+#export AWS_DEFAULT_PROFILE=admin
 
 echo "Creating a Bucket to hold the Lambda code."
 ##Create a bucket to hold lambda function code
@@ -37,7 +38,7 @@ echo "Creating the Instance Scheduler Stack."
 ##Create Instance Scheduler stack
 aws cloudformation create-stack --stack-name $stackName \
     --template-body file://cfTemplate.yaml \
-    --parameters ParameterKey=codeBucket,ParameterValue=$bucketName \
+    --parameters ParameterKey=codeBucket,ParameterValue=$bucketName ParameterKey=adminEmail,ParameterValue=$adminEmail \
     --capabilities CAPABILITY_IAM --region $region
 
 #Wait for the stack to be created
@@ -64,5 +65,6 @@ aws dynamodb put-item --table-name $dbTable --item '{"hour": {"N": "22"},"stopTa
 
 #Uncomment the following line if you had to change the default profile for this script
 
+#unset AWS_DEFAULT_PROFILE
+
 echo "Instance scheduler deploy is complete."
-unset AWS_DEFAULT_PROFILE
