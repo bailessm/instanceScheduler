@@ -1,0 +1,7 @@
+Resources:
+  codeBucket:
+    Type: 'AWS::S3::Bucket'
+Outputs:
+  s3Bucket:
+    Description: 'The bucket to store lambdafunction code in'
+    Value: !GetAtt codeBucket.Arn

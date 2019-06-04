@@ -1,0 +1,329 @@
+Parameters:
+  adminEmail:
+    Type: String
+    Default: "bailess@amazon.com"
+  stopFunctionCode:
+    Type: String
+    Default: "stopInstances/stopInstances.zip"
+  stopHandler:
+    Type: String
+    Default: 'stopInstances.lambda_handler'
+  startFunctionCode:
+    Type: String
+    Default: "startInstances/startInstances.zip"
+  startHandler:
+    Type: String
+    Default: 'startInstances.lambda_handler'
+  instanceSchedulerCode:
+    Type: String
+    Default: "instanceScheduler/instanceScheduler.zip"
+  instanceSchedulerHandler:
+    Type: String
+    Default: 'instanceScheduler.lambda_handler'
+  codeBucket:
+    Type: String
+    Default: "tst-lambda-functions"
+  appName:
+    Type: String
+    Default: "stopinator.test.env"
+  pollerInterval:
+    Type: String
+    Default: "cron(0 0-23 ? * MON-FRI *)"
+  dynamoDBMaxReadCapacity:
+    Type: Number
+    Default: 250
+  dynamoDBMaxWriteCapacity:
+    Type: Number
+    Default: 250
+Resources:
+
+  ###Dynamodb Table to hold application configuration to poll
+  DDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: "hour"
+          AttributeType: "N"
+      KeySchema:
+        -
+          AttributeName: "hour"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+  ###Autoscaling rules for dynamodb table
+  WriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: !Ref dynamoDBMaxWriteCapacity
+      MinCapacity: 2
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref DDBTable
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:SetAlarmState"
+                  - "cloudwatch:DeleteAlarms"
+                Resource: "*"
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WriteAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+  ReadCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: !Ref dynamoDBMaxReadCapacity
+      MinCapacity: 2
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref DDBTable
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  ReadScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ReadCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+  startTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      -
+        Endpoint: !GetAtt startFunction.Arn
+        Protocol: "lambda"
+      - Endpoint: !Ref adminEmail
+        Protocol: "email"
+  startTopicInvokePermission: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "startFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "sns.amazonaws.com"
+      SourceArn: !Ref startTopic
+  
+  stopTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      -
+        Endpoint: !GetAtt stopFunction.Arn
+        Protocol: "lambda"
+      - Endpoint: !Ref adminEmail
+        Protocol: "email"
+  stopTopicInvokePermission: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref "stopFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "sns.amazonaws.com"
+      SourceArn: !Ref stopTopic
+
+  ###Lambda Function and IAM to pull instance tags from DynamoDB table
+  ###and push them to cloudwatch events to be started or stopped.
+  instanceScheduler:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code: 
+        S3Bucket: !Ref codeBucket
+        S3Key: !Ref instanceSchedulerCode
+      Handler: !Ref instanceSchedulerHandler
+      Role: !GetAtt [ instanceSchedulerRole, Arn ]
+      Runtime: 'python3.7'
+      Environment:
+        Variables:
+          dynamodbTable: !GetAtt DDBTable.Arn
+          startTopic: !Ref startTopic
+          stopTopic: !Ref stopTopic
+      Tags: 
+        - 
+          Key: "Environment"
+          Value: !Ref appName
+      Timeout: 30
+  instanceSchedulerRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns: 
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      Policies:
+        -
+          PolicyName: "instanceSchedulerPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "sns:Publish"
+                  - "dynamodb:GetItem"
+                Resource: "*"
+
+  ###Lambda Function and IAM to start Instaces
+  startFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code: 
+        S3Bucket: !Ref codeBucket
+        S3Key: !Ref startFunctionCode
+      Handler: !Ref startHandler
+      Role: !GetAtt startFunctionRole.Arn
+      Runtime: 'python3.7'
+      Tags: 
+        - 
+          Key: "Environment"
+          Value: !Ref appName
+      Timeout: 30
+  startFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns: 
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      Policies:
+        -
+          PolicyName: "startFunctionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "ec2:DescribeInstances"
+                  - "ec2:StartInstances"
+                  - "ec2:DescribeTags"
+                Resource: "*"
+
+  ###Lambda Function and IAM role to stop Instances
+  stopFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code: 
+        S3Bucket: !Ref codeBucket
+        S3Key: !Ref stopFunctionCode
+      Handler: !Ref stopHandler
+      Role: !GetAtt stopFunctionRole.Arn
+      Runtime: 'python3.7'
+      Tags: 
+        - 
+          Key: "Environment"
+          Value: !Ref appName
+      Timeout: 30
+  stopFunctionRole:  
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns: 
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      Policies:
+        -
+          PolicyName: "stopFunctionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "ec2:DescribeInstances"
+                  - "ec2:DescribeTags"
+                  - "ec2:StopInstances"
+                Resource: "*"
+
+
+    ###cloudwatch event rule to trigger urlPuller function
+  
+  ###pollerAppName is passed to be the cloudwatch event source
+  ###dynamoTable is passed to the function to process
+  instanceSchedulerRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Scheduled Rule to process Functions"
+      ScheduleExpression: !Ref pollerInterval
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: !GetAtt "instanceScheduler.Arn"
+          Id: "TargetFunctionV1"
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref instanceScheduler
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt instanceSchedulerRule.Arn
+
+Outputs:
+  DynamoDBTable:
+    Description: 'The DynamoDB table that holds the URLs to Query'
+    Value: !GetAtt DDBTable.Arn
