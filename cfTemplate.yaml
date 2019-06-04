@@ -1,7 +1,7 @@
 Parameters:
   adminEmail:
     Type: String
-    Default: "bailess@amazon.com"
+    Default: "123@usa.com"
   stopFunctionCode:
     Type: String
     Default: "stopInstances/stopInstances.zip"
