@@ -47,11 +47,6 @@ adminEmail='123@usa.com'
 In the folder that you want to download the instanceScheduler folder and files to run the following command.
 ~~~~
 git clone https://github.com/bailessm/instanceSchduler.git
-~~~~
-
-After you have inspected the files you can deploy the code by switching to the instance scheduler directory and running deploy.sh.
-
-~~~~
 cd instanceScheduler
 bash deploy.sh
 ~~~~
