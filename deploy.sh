@@ -1,14 +1,30 @@
 #! /bin/bash
-stackName='instanceScheduler'
-region='us-east-1'
-adminEmail='123@usa.com'
 
-#If you use another cli profile for elevated priviledges uncomment the
-#followind line and modify it with your profile name.  Also uncomment the
-#last line in this file to change back to the default profile after the 
-#script completes.
+for ARGUMENT in "$@"
+do
 
-export AWS_DEFAULT_PROFILE=admin
+    KEY=$(echo $ARGUMENT | cut -f1 -d=)
+    VALUE=$(echo $ARGUMENT | cut -f2 -d=)   
+
+    case "$KEY" in
+            --stackName)    stackName=${VALUE} ;;
+            --region)   region=${VALUE} ;;
+            --adminEmail) adminEmail=${VALUE} ;;
+            --defaultProfile) defaultProfile=${VALUE} ;;  
+            *)   
+    esac    
+
+done
+
+stackName=${stackName:-'instanceScheduler'}
+region=${region:-'us-east-1'}
+adminEmail=${adminEmail:-'123@usa.com'}
+
+
+if [ ! -z $defaultProfile ] 
+then 
+    export AWS_DEFAULT_PROFILE=$defaultProfile
+fi
 
 echo "Creating a Bucket to hold the Lambda code."
 ##Create a bucket to hold lambda function code
@@ -86,6 +102,9 @@ rm outputfile.txt
 
 #Uncomment the following line if you had to change the default profile for this script
 
-unset AWS_DEFAULT_PROFILE
+if [ ! -z $defaultProfile ] 
+then 
+    unset AWS_DEFAULT_PROFILE
+fi
 
 echo "Instance scheduler deploy is complete."
