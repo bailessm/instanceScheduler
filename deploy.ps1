@@ -34,22 +34,10 @@ Wait-CFNStack -StackName "$stackName-bucket" -Region $region
 $bucketName=$(Get-CFNStackResource -StackName "$stackName-bucket" -Region $region -LogicalResourceId "mybucket").PhysicalResourceId
 
 ##compres and upload the lambda code to the code bucket
-Compress-Archive -Path ./instanceScheduler/instanceScheduler.py -DestinationPath ./instanceScheduler/instanceScheduler-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./instanceScheduler/instanceScheduler-tmp.zip -Key instanceScheduler.zip
-rm ./instanceScheduler/instanceScheduler-tmp.zip
-
-Compress-Archive -Path ./startInstances/startInstances.py -DestinationPath ./startInstances/startInstances-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./startInstances/startInstances-tmp.zip -Key startInstances.zip
-rm ./startInstances/startInstances-tmp.zip
-
-Compress-Archive -Path ./stopInstances/stopInstances.py -DestinationPath ./stopInstances/stopInstances-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./stopInstances/stopInstances-tmp.zip -Key stopInstances.zip
-rm ./stopInstances/stopInstances-tmp.zip
-
-Compress-Archive -Path ./testRecordsFunction/testRecords.py -DestinationPath ./testRecordsFunction/testRecords-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./testRecordsFunction/testRecords-tmp.zip -Key testRecords.zip
-rm ./testRecordsFunction/testRecords-tmp.zip
-
+Write-S3Object -BucketName $bucketName -File ./psZipCode/instanceScheduler-tmp.zip -Key instanceScheduler.zip
+Write-S3Object -BucketName $bucketName -File ./psZipCode/startInstances-tmp.zip -Key startInstances.zip
+Write-S3Object -BucketName $bucketName -File ./psZipCode/stopInstances-tmp.zip -Key stopInstances.zip
+Write-S3Object -BucketName $bucketName -File ./psZipCode/testRecords-tmp.zip -Key testRecords.zip
 Write-S3Object -BucketName $bucketName -File ./cfTemplate.yaml -Key cfTemplate.yaml
 
 write-host("$bucketName was successfully created and the lambda function code was uploaded.")
