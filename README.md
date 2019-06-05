@@ -75,11 +75,11 @@ cd instanceScheduler
 You can pass the following variables if you would like to modify the defaults to deploy.ps1.
 
 ~~~~
-Param(
-    [string]$stackName="instanceScheduler-test",
-    [string]$region="us-east-1",
-    [string]$adminEmail="123@usa.com",
-    $defaultProfile=""
-)
+
+  -stackName
+  -region
+  -adminEmail
+  -defaultProfile
+
 ~~~~
 
