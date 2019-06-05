@@ -8,7 +8,7 @@ adminEmail='123@usa.com'
 #last line in this file to change back to the default profile after the 
 #script completes.
 
-#export AWS_DEFAULT_PROFILE=admin
+export AWS_DEFAULT_PROFILE=admin
 
 echo "Creating a Bucket to hold the Lambda code."
 ##Create a bucket to hold lambda function code
@@ -31,14 +31,18 @@ bucketName=${s3BucketArn//$'arn:aws:s3:::'/}
 
 ##upload the lambda code to the code bucket
 for i in $(find . -name '*py')
-do
-    zipFile=${i//$'.py'/}
-    zip $zipFile-tmp.zip $i
+do  
+    file=$(echo $i | cut -d'/' -f3)
+    echo $file
+    zipFile=${file//$'.py'/}
+    echo $zipFile
+    echo $i
+    zip $zipFile.zip $i -j
 done
 
 aws s3 cp . s3://$bucketName/ --recursive --exclude "*" --include "*.zip"
 
-find . -name '*-tmp.zip' | xargs rm
+find . -name '*.zip' | xargs rm
 
 echo "$bucketName was successfully created and the lambda function code was uploaded."
 
@@ -68,11 +72,20 @@ dbTable=${dbTable//$'"'/}
 ###Create two records in the dynamodb table as an example. These two rows will affect ec2 instances
 ###with and Environment Tag that has the values qa or dev.  It will start them at 10 UTC(7AM EDT) and stop
 ###them at 22 UTC(6PM EDT).
-aws dynamodb put-item --table-name $dbTable --item '{"hour": {"N": "10"},"startTags": {"L": [{"M": {"Key": {"S": "Environment"},"Value": {"S": "dev"}}},{"M": {"Key": {"S": "Environment"},"Value": {"S": "qa"}}}]}}' --region $region
-aws dynamodb put-item --table-name $dbTable --item '{"hour": {"N": "22"},"stopTags": {"L": [{"M": {"Key": {"S": "Environment"},"Value": {"S": "dev"}}},{"M": {"Key": {"S": "Environment"},"Value": {"S": "qa"}}}]}}' --region $region
+
+lambdaArn=$(aws cloudformation describe-stacks --stack-name $stackName \
+    --query 'Stacks[0].Outputs[?OutputKey==`testRecordsFunction`].OutputValue[]' --region $region)
+
+lambdaArn="${lambdaArn//[}"
+lambdaArn="${lambdaArn//]}"
+lambdaArn=${lambdaArn//'"'}
+
+
+aws lambda invoke --function-name $lambdaArn --region $region outputfile.txt
+rm outputfile.txt
 
 #Uncomment the following line if you had to change the default profile for this script
 
-#unset AWS_DEFAULT_PROFILE
+unset AWS_DEFAULT_PROFILE
 
 echo "Instance scheduler deploy is complete."

@@ -4,25 +4,25 @@ Parameters:
     Default: "123@usa.com"
   stopFunctionCode:
     Type: String
-    Default: "stopInstances/stopInstances.zip"
+    Default: "stopInstances.zip"
   stopHandler:
     Type: String
     Default: 'stopInstances.lambda_handler'
   startFunctionCode:
     Type: String
-    Default: "startInstances/startInstances.zip"
+    Default: "startInstances.zip"
   startHandler:
     Type: String
     Default: 'startInstances.lambda_handler'
   instanceSchedulerCode:
     Type: String
-    Default: "instanceScheduler/instanceScheduler.zip"
+    Default: "instanceScheduler.zip"
   instanceSchedulerHandler:
     Type: String
     Default: 'instanceScheduler.lambda_handler'
   testRecordsCode:
     Type: String
-    Default: 'testRecords/testRecords.zip'
+    Default: 'testRecords.zip'
   testRecordsHandler:
     Type: String
     Default: 'testRecords.lambda_handler'
@@ -221,6 +221,7 @@ Resources:
                   - "sns:Publish"
                   - "dynamodb:GetItem"
                 Resource: "*"
+  
   ###Lambda Function and IAM to pull instance tags from DynamoDB table
   ###and push them to cloudwatch events to be started or stopped.
   testRecordsFunction:
@@ -376,3 +377,6 @@ Outputs:
   DynamoDBTable:
     Description: 'The DynamoDB table that holds the URLs to Query'
     Value: !GetAtt DDBTable.Arn
+  testRecordsFunction:
+    Description: "Arn to load test records into the solution"
+    Value: !GetAtt testRecordsFunction.Arn

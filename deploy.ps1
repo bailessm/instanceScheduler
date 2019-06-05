@@ -3,7 +3,7 @@ Param(
     [string]$stackName="instanceScheduler-test",
     [string]$region="us-east-1",
     [string]$adminEmail="123@usa.com",
-    $defaultProfile=""
+    [string]$defaultProfile=""
 )
 
 if(-Not ($defaultProfile -eq "" )){
@@ -35,19 +35,19 @@ $bucketName=$(Get-CFNStackResource -StackName "$stackName-bucket" -Region $regio
 
 ##compres and upload the lambda code to the code bucket
 Compress-Archive -Path ./instanceScheduler/instanceScheduler.py -DestinationPath ./instanceScheduler/instanceScheduler-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./instanceScheduler/instanceScheduler-tmp.zip -Key instanceScheduler/instanceScheduler.zip
+Write-S3Object -BucketName $bucketName -File ./instanceScheduler/instanceScheduler-tmp.zip -Key instanceScheduler.zip
 rm ./instanceScheduler/instanceScheduler-tmp.zip
 
 Compress-Archive -Path ./startInstances/startInstances.py -DestinationPath ./startInstances/startInstances-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./startInstances/startInstances-tmp.zip -Key startInstances/startInstances.zip
+Write-S3Object -BucketName $bucketName -File ./startInstances/startInstances-tmp.zip -Key startInstances.zip
 rm ./startInstances/startInstances-tmp.zip
 
 Compress-Archive -Path ./stopInstances/stopInstances.py -DestinationPath ./stopInstances/stopInstances-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./stopInstances/stopInstances-tmp.zip -Key stopInstances/stopInstances.zip
+Write-S3Object -BucketName $bucketName -File ./stopInstances/stopInstances-tmp.zip -Key stopInstances.zip
 rm ./stopInstances/stopInstances-tmp.zip
 
 Compress-Archive -Path ./testRecordsFunction/testRecords.py -DestinationPath ./testRecordsFunction/testRecords-tmp.zip
-Write-S3Object -BucketName $bucketName -File ./testRecordsFunction/testRecords-tmp.zip -Key testRecords/testRecords.zip
+Write-S3Object -BucketName $bucketName -File ./testRecordsFunction/testRecords-tmp.zip -Key testRecords.zip
 rm ./testRecordsFunction/testRecords-tmp.zip
 
 Write-S3Object -BucketName $bucketName -File ./cfTemplate.yaml -Key cfTemplate.yaml
@@ -80,7 +80,7 @@ $testRecordsFunction=$(Get-CFNStackResource -StackName $stackName -Region $regio
 ###Create two records in the dynamodb table as an example. These two rows will affect ec2 instances
 ###with and Environment Tag that has the values qa or dev.  It will start them at 10 UTC(7AM EDT) and stop
 ###them at 22 UTC(6PM EDT).
-
+Start-Sleep -s 15
 Invoke-LMFunction -FunctionName $testRecordsFunction -Region $region
 
 #aws dynamodb put-item --table-name $dbTable --item '{"hour": {"N": "10"},"startTags": {"L": [{"M": {"Key": {"S": "Environment"},"Value": {"S": "dev"}}},{"M": {"Key": {"S": "Environment"},"Value": {"S": "qa"}}}]}}' --region $region
