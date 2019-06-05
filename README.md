@@ -37,14 +37,19 @@ The Record added to stop those tagged instances.
   ]
 }
 ```
-With the default cron statement for the instanceScheduler lambda funtion, it will poll every hour on the hour Monday Thru Friday to see if you have any tasks to perform at that time.  If it does, it will publish a message to the appropriate SNS topic to start or stop the instances with the included tags.  Since this is SNS you can also send an email when these start and stop messages are sent. Modify the variable on line 4 of deploy.sh with your email address to email that.
+With the default cron statement for the instanceScheduler lambda funtion, it will poll every hour on the hour Monday Thru Friday to see if you have any tasks to perform at that time.  If it does, it will publish a message to the appropriate SNS topic to start or stop the instances with the included tags.  
+
+# Deployment 
+## MacOS
+
+Since this is SNS you can also send an email when these start and stop messages are sent. Modify the variable on line 4 of deploy.sh with your email address to email that.
 
 ~~~~
 adminEmail='123@usa.com'
 ~~~~
 
-# Deployment
 In the folder that you want to download the instanceScheduler folder and files to run the following command.
+
 ~~~~
 git clone https://github.com/bailessm/instanceSchduler.git
 cd instanceScheduler
@@ -53,4 +58,25 @@ bash deploy.sh
 
 This script will use your aws cli credentials to create all of the aws assets for this project.  If you use a different cli profile for elevated priviledges, you can uncomment line 10 and 67 of deploy.sh
 and modify line 10 to meet your needs.
+
+## Windows
+ 
+ From a powershell window run the following script.
+~~~~
+git clone https://github.com/bailessm/instanceSchduler.git
+cd instanceScheduler
+./deploy.ps1
+
+~~~~
+
+You can pass the following variables if you would like to modify the defaults to deploy.ps1.
+
+~~~~
+Param(
+    [string]$stackName="instanceScheduler-test",
+    [string]$region="us-east-1",
+    [string]$adminEmail="123@usa.com",
+    $defaultProfile=""
+)
+~~~~
 

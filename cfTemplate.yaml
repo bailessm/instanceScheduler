@@ -20,6 +20,12 @@ Parameters:
   instanceSchedulerHandler:
     Type: String
     Default: 'instanceScheduler.lambda_handler'
+  testRecordsCode:
+    Type: String
+    Default: 'testRecords/testRecords.zip'
+  testRecordsHandler:
+    Type: String
+    Default: 'testRecords.lambda_handler'
   codeBucket:
     Type: String
     Default: "tst-lambda-functions"
@@ -215,6 +221,49 @@ Resources:
                   - "sns:Publish"
                   - "dynamodb:GetItem"
                 Resource: "*"
+  ###Lambda Function and IAM to pull instance tags from DynamoDB table
+  ###and push them to cloudwatch events to be started or stopped.
+  testRecordsFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code: 
+        S3Bucket: !Ref codeBucket
+        S3Key: !Ref testRecordsCode
+      Handler: !Ref testRecordsHandler
+      Role: !GetAtt [ testRecordsRole, Arn ]
+      Runtime: 'python3.7'
+      Environment:
+        Variables:
+          dynamodbTable: !GetAtt DDBTable.Arn
+      Tags: 
+        - 
+          Key: "Environment"
+          Value: !Ref appName
+      Timeout: 30
+  testRecordsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns: 
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      Policies:
+        -
+          PolicyName: "instanceSchedulerPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "dynamodb:PutItem"
+                Resource: !GetAtt DDBTable.Arn
 
   ###Lambda Function and IAM to start Instaces
   startFunction:
