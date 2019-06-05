@@ -72,7 +72,7 @@ cd instanceScheduler
 
 ~~~~
 
-You can pass the following variables if you would like to modify the defaults to deploy.ps1.
+You can pass the following optional variables if you would like to modify the defaults to deploy.ps1.
 
 ~~~~
 
