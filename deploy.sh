@@ -30,7 +30,15 @@ s3BucketArn=${s3BucketArn//$' '/}
 bucketName=${s3BucketArn//$'arn:aws:s3:::'/}
 
 ##upload the lambda code to the code bucket
+for i in $(find . -name '*py')
+do
+    zipFile=${i//$'.py'/}
+    zip $zipFile-tmp.zip $i
+done
+
 aws s3 cp . s3://$bucketName/ --recursive --exclude "*" --include "*.zip"
+
+find . -name '*-tmp.zip' | xargs rm
 
 echo "$bucketName was successfully created and the lambda function code was uploaded."
 
