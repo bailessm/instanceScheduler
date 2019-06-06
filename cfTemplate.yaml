@@ -222,8 +222,7 @@ Resources:
                   - "dynamodb:GetItem"
                 Resource: "*"
   
-  ###Lambda Function and IAM to pull instance tags from DynamoDB table
-  ###and push them to cloudwatch events to be started or stopped.
+  ###Lambda Function and IAM to insert test records
   testRecordsFunction:
     Type: AWS::Lambda::Function
     Properties: 
