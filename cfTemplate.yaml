@@ -4,25 +4,25 @@ Parameters:
     Default: "123@usa.com"
   stopFunctionCode:
     Type: String
-    Default: "stopInstances.zip"
+    Default: "stopInstances-latest.zip"
   stopHandler:
     Type: String
     Default: 'stopInstances.lambda_handler'
   startFunctionCode:
     Type: String
-    Default: "startInstances.zip"
+    Default: "startInstances-latest.zip"
   startHandler:
     Type: String
     Default: 'startInstances.lambda_handler'
   instanceSchedulerCode:
     Type: String
-    Default: "instanceScheduler.zip"
+    Default: "instanceScheduler-latest.zip"
   instanceSchedulerHandler:
     Type: String
     Default: 'instanceScheduler.lambda_handler'
   testRecordsCode:
     Type: String
-    Default: 'testRecords.zip'
+    Default: 'testRecords-latest.zip'
   testRecordsHandler:
     Type: String
     Default: 'testRecords.lambda_handler'
@@ -371,7 +371,6 @@ Resources:
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
       SourceArn: !GetAtt instanceSchedulerRule.Arn
-
 Outputs:
   DynamoDBTable:
     Description: 'The DynamoDB table that holds the URLs to Query'

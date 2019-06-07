@@ -1,5 +1,6 @@
 #! /bin/bash
 
+#process input variables
 for ARGUMENT in "$@"
 do
 
@@ -16,11 +17,12 @@ do
 
 done
 
+#set defaults if you didn't specify them
 stackName=${stackName:-'instanceScheduler'}
 region=${region:-'us-east-1'}
 adminEmail=${adminEmail:-'123@usa.com'}
 
-
+#change the default profile if you specified a temporary one.
 if [ ! -z $defaultProfile ] 
 then 
     export AWS_DEFAULT_PROFILE=$defaultProfile
@@ -35,17 +37,12 @@ aws cloudformation wait stack-create-complete --stack-name $stackName-Bucket --r
 
 ##pull the s3Bucket Output from the bucket
 s3BucketArn=$(aws cloudformation describe-stacks --stack-name $stackName-Bucket \
-    --query 'Stacks[0].Outputs[?OutputKey==`s3Bucket`].OutputValue[]' --region $region)
+    --query 'Stacks[0].Outputs[?OutputKey==`s3Bucket`].OutputValue[]' --region $region --output text)
 
 ##Pull the S3 bucket name from the ARN
-s3BucketArn="${s3BucketArn//[}"
-s3BucketArn="${s3BucketArn//]}"
-s3BucketArn=${s3BucketArn//$'\n'/}
-s3BucketArn=${s3BucketArn//$'"'/}
-s3BucketArn=${s3BucketArn//$' '/}
 bucketName=${s3BucketArn//$'arn:aws:s3:::'/}
 
-##upload the lambda code to the code bucket
+##zip and upload the lambda code to the code bucket
 for i in $(find . -name '*py')
 do  
     file=$(echo $i | cut -d'/' -f3)
@@ -53,12 +50,11 @@ do
     zipFile=${file//$'.py'/}
     echo $zipFile
     echo $i
-    zip $zipFile.zip $i -j
+    zip $zipFile-latest.zip $i -j
 done
 
-aws s3 cp . s3://$bucketName/ --recursive --exclude "*" --include "*.zip"
-
-find . -name '*.zip' | xargs rm
+aws s3 cp . s3://$bucketName/ --recursive --exclude "*" --include "*-latest.zip"
+find . -name '*-latest.zip' | xargs rm
 
 echo "$bucketName was successfully created and the lambda function code was uploaded."
 
@@ -74,34 +70,19 @@ echo "Please wait for the stack to be created..."
 aws cloudformation wait stack-create-complete --stack-name $stackName --region $region
 echo "The stack application is ready, loading test URLs..."
 
-dbTableArn=$(aws cloudformation describe-stacks --stack-name $stackName \
-    --query 'Stacks[0].Outputs[?OutputKey==`DynamoDBTable`].OutputValue[]' --region $region)
-
-##Pull the DDBTable from the ARN
-dbTableArn="${dbTableArn//[}"
-dbTableArn="${dbTableArn//]}"
-dbTableArn=$(tr '/' ';' <<<$dbTableArn)
-dbTable="$(echo $dbTableArn | cut -d';' -f2)"
-dbTable=${dbTable//$'\n'/}
-dbTable=${dbTable//$'"'/}
-
 ###Create two records in the dynamodb table as an example. These two rows will affect ec2 instances
 ###with and Environment Tag that has the values qa or dev.  It will start them at 10 UTC(7AM EDT) and stop
 ###them at 22 UTC(6PM EDT).
 
+#get the arn for the lambda function to insert the test records
 lambdaArn=$(aws cloudformation describe-stacks --stack-name $stackName \
-    --query 'Stacks[0].Outputs[?OutputKey==`testRecordsFunction`].OutputValue[]' --region $region)
+    --query 'Stacks[0].Outputs[?OutputKey==`testRecordsFunction`].OutputValue[]' --region $region --output text)
 
-lambdaArn="${lambdaArn//[}"
-lambdaArn="${lambdaArn//]}"
-lambdaArn=${lambdaArn//'"'}
-
-
+#invoke the lambda function to input those records
 aws lambda invoke --function-name $lambdaArn --region $region outputfile.txt
 rm outputfile.txt
 
-#Uncomment the following line if you had to change the default profile for this script
-
+#revert back from the temporary aws profile if you switched
 if [ ! -z $defaultProfile ] 
 then 
     unset AWS_DEFAULT_PROFILE
