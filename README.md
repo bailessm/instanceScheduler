@@ -1,14 +1,15 @@
 # instanceScheduler
 Serverless Application to start and stop ec2 instances on a schedule 
 
-This initial deployment with the example entries will affect ec2 instances with an Environment Tag that has the values qa or dev.  It will start those instances at 10 UTC(7AM EDT) and stop them at 22 UTC(6PM EDT).
+This initial deployment with the example entries will affect ec2 instances in the region you launched the CF template in with an Environment Tag that has the values qa or dev.  It will start those instances at 10 UTC(7AM EDT) and stop them at 22 UTC(6PM EDT).
 
-The application contains a DynamoDB table, 3 lambda functions, one cloudwatch rule, and two sns topics. The DynamoDB Table contains an item for each hour that you would like to start or stop instances.
+The application contains a DynamoDB table, 3 lambda functions, one cloudwatch rule, and two sns topics. The DynamoDB Table contains an item for each hour per rgion that you would like to start or stop instances. hour is the partition key and region is the sort key for that table.
 
 The record added to start Instances.
 ```json
 {
   "hour": 10,
+  "region": "us-east-1",
   "startTags": [
     {
       "Key": "Environment",
@@ -25,6 +26,7 @@ The Record added to stop those tagged instances.
 ```json
 {
   "hour": 22,
+  "region": "us-east-1",
   "stopTags": [
     {
       "Key": "Environment",
