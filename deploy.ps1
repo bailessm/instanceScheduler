@@ -1,10 +1,10 @@
-
 Param(
     [string]$stackName="instanceScheduler-test",
     [string]$region="us-east-1",
     [string]$adminEmail="123@usa.com",
     [string]$defaultProfile=""
 )
+Import-Module AWSPowerShell.NetCore
 
 if(-Not ($defaultProfile -eq "" )){
     Set-AWSCredential -ProfileName $defaultProfile 
@@ -13,7 +13,7 @@ if(-Not ($defaultProfile -eq "" )){
 write-host("Creating a Bucket to hold the Lambda code.")
 ##Create a bucket to hold lambda function code
 $Stack = @{
-    StackName = "$stackName-bucket"
+    StackName = "$stackName-Bucket"
     Region = $region
     TemplateBody = @'
 Resources:
@@ -22,32 +22,29 @@ Resources:
 Outputs:
   s3Bucket:
     Description: 'The bucket to store lambdafunction code in'
-    Value: !GetAtt mybucket.Arn
+    Value: !Ref mybucket
+    Export:
+      Name: !Sub "${AWS::StackName}-s3Bucket"
 '@
 }
 New-CFNStack @Stack
 
 ##Wait for the bucket to be created
-Wait-CFNStack -StackName "$stackName-bucket" -Region $region
+Wait-CFNStack -StackName "$stackName-Bucket" -Region $region
 
 ##pull the s3Bucket Output from the bucket
-$bucketName=$(Get-CFNStackResource -StackName "$stackName-bucket" -Region $region -LogicalResourceId "mybucket").PhysicalResourceId
+$bucketName=$(Get-CFNStackResource -StackName "$stackName-Bucket" -Region $region -LogicalResourceId "mybucket").PhysicalResourceId
 
 ##compres and upload the lambda code to the code bucket
-Write-S3Object -BucketName $bucketName -File ./psZipCode/instanceScheduler-tmp.zip -Key instanceScheduler.zip
-Write-S3Object -BucketName $bucketName -File ./psZipCode/startInstances-tmp.zip -Key startInstances.zip
-Write-S3Object -BucketName $bucketName -File ./psZipCode/stopInstances-tmp.zip -Key stopInstances.zip
-Write-S3Object -BucketName $bucketName -File ./psZipCode/testRecords-tmp.zip -Key testRecords.zip
+Write-S3Object -BucketName $bucketName -File ./ps1-packages/instanceScheduler.zip -Key instanceScheduler-latest.zip
+Write-S3Object -BucketName $bucketName -File ./ps1-packages/startInstances.zip -Key startInstances-latest.zip
+Write-S3Object -BucketName $bucketName -File ./ps1-packages/stopInstances.zip -Key stopInstances-latest.zip
+Write-S3Object -BucketName $bucketName -File ./ps1-packages/testRecords.zip -Key testRecords-latest.zip
 Write-S3Object -BucketName $bucketName -File ./cfTemplate.yaml -Key cfTemplate.yaml
 
 write-host("$bucketName was successfully created and the lambda function code was uploaded.")
 
 write-host("Creating the Instance Scheduler Stack.")
-
-##Create Instance Scheduler stack
-$p1 = new-object Amazon.CloudFormation.Model.Parameter    
-$p1.ParameterKey = "codeBucket"
-$p1.ParameterValue = $bucketName
 
 $p2 = new-object Amazon.CloudFormation.Model.Parameter    
 $p2.ParameterKey = "adminEmail"
@@ -55,7 +52,7 @@ $p2.ParameterValue = "$adminEmail"
 
 New-CFNStack -StackName $stackName -Capability CAPABILITY_IAM `
     -TemplateURL "https://$bucketName.s3.amazonaws.com/cfTemplate.yaml" `
-    -Parameter @( $p1, $p2 ) `
+    -Parameter @( $p2 ) `
     -Region $region
 
 #Wait for the stack to be created
