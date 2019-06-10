@@ -51,10 +51,16 @@ Resources:
         -
           AttributeName: "hour"
           AttributeType: "N"
+        -
+          AttributeName: "region"
+          AttributeType: "S"
       KeySchema:
         -
           AttributeName: "hour"
           KeyType: "HASH"
+        -
+          AttributeName: "region"
+          KeyType: "RANGE"
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
