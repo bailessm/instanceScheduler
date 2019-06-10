@@ -6,6 +6,7 @@ from datetime import datetime
 session = boto3.Session()
 dynamodb = session.client('dynamodb')
 sns = session.client('sns')
+region = session.region_name
 
 stopTopic = os.environ['stopTopic']
 startTopic = os.environ['startTopic']
@@ -18,7 +19,11 @@ def lambda_handler(event, context):
         Key={
             'hour': {
                 'N': str(datetime.utcnow().hour),
+            },
+            "region": {
+                "S": region
             }
+
         }
     )
     print(datetime.utcnow().hour)

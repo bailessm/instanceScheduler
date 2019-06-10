@@ -1,7 +1,9 @@
 import json
 import boto3
 
-ec2 = boto3.resource('ec2')
+session = boto3.Session()
+ec2 = session.resource('ec2')
+region = session.region_name
 
 def lambda_handler(event, context):
     message = json.loads(event['Records'][0]['Sns']['Message'])

@@ -3,6 +3,7 @@ import os
 
 session = boto3.Session()
 dynamodb = session.client('dynamodb')
+region = session.region_name
 
 dynamodbTable = os.environ['dynamodbTable'].split("/")[1]
 
@@ -12,6 +13,9 @@ def lambda_handler(event, context):
     Item={
           "hour": {
             "N": "22"
+          },
+          "region": {
+            "S": region
           },
           "stopTags": {
             "L": [
@@ -44,6 +48,9 @@ def lambda_handler(event, context):
     Item={
           "hour": {
             "N": "10"
+          },
+          "region": {
+            "S": region
           },
           "startTags": {
             "L": [
