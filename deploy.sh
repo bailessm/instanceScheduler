@@ -1,5 +1,4 @@
 #! /bin/bash
-
 #process input variables
 for ARGUMENT in "$@"
 do
@@ -36,20 +35,14 @@ aws cloudformation create-stack --stack-name $stackName-Bucket --template-body f
 aws cloudformation wait stack-create-complete --stack-name $stackName-Bucket --region $region
 
 ##pull the s3Bucket Output from the bucket
-s3BucketArn=$(aws cloudformation describe-stacks --stack-name $stackName-Bucket \
+bucketName=$(aws cloudformation describe-stacks --stack-name $stackName-Bucket \
     --query 'Stacks[0].Outputs[?OutputKey==`s3Bucket`].OutputValue[]' --region $region --output text)
-
-##Pull the S3 bucket name from the ARN
-bucketName=${s3BucketArn//$'arn:aws:s3:::'/}
 
 ##zip and upload the lambda code to the code bucket
 for i in $(find . -name '*py')
 do  
     file=$(echo $i | cut -d'/' -f3)
-    echo $file
     zipFile=${file//$'.py'/}
-    echo $zipFile
-    echo $i
     zip $zipFile-latest.zip $i -j
 done
 
@@ -62,7 +55,7 @@ echo "Creating the Instance Scheduler Stack."
 ##Create Instance Scheduler stack
 aws cloudformation create-stack --stack-name $stackName \
     --template-body file://cfTemplate.yaml \
-    --parameters ParameterKey=codeBucket,ParameterValue=$bucketName ParameterKey=adminEmail,ParameterValue=$adminEmail \
+    --parameters ParameterKey=adminEmail,ParameterValue=$adminEmail \
     --capabilities CAPABILITY_IAM --region $region
 
 #Wait for the stack to be created

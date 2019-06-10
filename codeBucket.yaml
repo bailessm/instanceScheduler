@@ -4,4 +4,6 @@ Resources:
 Outputs:
   s3Bucket:
     Description: 'The bucket to store lambdafunction code in'
-    Value: !GetAtt codeBucket.Arn
+    Value: !Ref codeBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-s3Bucket"

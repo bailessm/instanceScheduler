@@ -26,9 +26,6 @@ Parameters:
   testRecordsHandler:
     Type: String
     Default: 'testRecords.lambda_handler'
-  codeBucket:
-    Type: String
-    Default: "tst-lambda-functions"
   appName:
     Type: String
     Default: "stopinator.test.env"
@@ -187,7 +184,9 @@ Resources:
     Type: AWS::Lambda::Function
     Properties: 
       Code: 
-        S3Bucket: !Ref codeBucket
+        S3Bucket: 
+          Fn::ImportValue: 
+            !Sub "${AWS::StackName}-Bucket-s3Bucket"
         S3Key: !Ref instanceSchedulerCode
       Handler: !Ref instanceSchedulerHandler
       Role: !GetAtt [ instanceSchedulerRole, Arn ]
@@ -233,7 +232,9 @@ Resources:
     Type: AWS::Lambda::Function
     Properties: 
       Code: 
-        S3Bucket: !Ref codeBucket
+        S3Bucket: 
+          Fn::ImportValue: 
+            !Sub "${AWS::StackName}-Bucket-s3Bucket"
         S3Key: !Ref testRecordsCode
       Handler: !Ref testRecordsHandler
       Role: !GetAtt [ testRecordsRole, Arn ]
@@ -276,7 +277,9 @@ Resources:
     Type: AWS::Lambda::Function
     Properties: 
       Code: 
-        S3Bucket: !Ref codeBucket
+        S3Bucket: 
+          Fn::ImportValue: 
+            !Sub "${AWS::StackName}-Bucket-s3Bucket"
         S3Key: !Ref startFunctionCode
       Handler: !Ref startHandler
       Role: !GetAtt startFunctionRole.Arn
@@ -318,7 +321,9 @@ Resources:
     Type: AWS::Lambda::Function
     Properties: 
       Code: 
-        S3Bucket: !Ref codeBucket
+        S3Bucket: 
+          Fn::ImportValue: 
+            !Sub "${AWS::StackName}-Bucket-s3Bucket"
         S3Key: !Ref stopFunctionCode
       Handler: !Ref stopHandler
       Role: !GetAtt stopFunctionRole.Arn
@@ -381,6 +386,10 @@ Outputs:
   DynamoDBTable:
     Description: 'The DynamoDB table that holds the URLs to Query'
     Value: !GetAtt DDBTable.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-DynamoDBTable"
   testRecordsFunction:
     Description: "Arn to load test records into the solution"
     Value: !GetAtt testRecordsFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-testRecordsFunction"
